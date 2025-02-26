@@ -12,6 +12,7 @@ import { styled } from '../../../styled.js';
 import Unlock from '../Unlock.js';
 
 interface Props {
+  address?: string;
   buttonText: string;
   className?: string;
   error: string | null;
@@ -21,9 +22,12 @@ interface Props {
   signId: string;
 }
 
-function SignArea ({ buttonText, className, error, isExternal, isFirst, setError, signId }: Props): React.ReactElement {
+function SignArea ({ address, buttonText, className, error, isExternal, isFirst, setError, signId }: Props): React.ReactElement {
   const [savePass, setSavePass] = useState(false);
   const [isLocked, setIsLocked] = useState<boolean | null>(null);
+  const [isWhitelisted, setIsWhitelisted] = useState<boolean>(false);
+  const [isWhitelistChecked, setIsWhitelistChecked] = useState<boolean>(false);
+  
   const [password, setPassword] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const onAction = useContext(ActionContext);
@@ -49,8 +53,52 @@ function SignArea ({ buttonText, className, error, isExternal, isFirst, setError
     };
   }, [isExternal, signId]);
 
+  const checkWhitelist = useCallback(async (address: string): Promise<boolean> => {
+    try {
+      const response = await fetch('http://localhost:3001/check-whitelist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address }),
+      });
+      const result = await response.json();
+      return result.isWhitelisted;
+    } catch (error) {
+      console.error('Error checking whitelist:', error);
+      throw new Error('Failed to check whitelist.');
+    }
+  }, []);
+
+  const handleCheckWhitelist = useCallback(async (): Promise<void> => {
+    if (!address) {
+      setError('Address is missing.');
+      return;
+    }
+  
+    try {
+      const isWhitelisted = await checkWhitelist(address);
+  
+      if (isWhitelisted) {
+        setIsWhitelisted(true);
+        setIsWhitelistChecked(true);
+        setError(null);
+      } else {
+        setIsWhitelisted(false);
+        setIsWhitelistChecked(true);
+        setError('Address is not whitelisted.');
+      }
+    } catch (error) {
+      console.error('Error checking whitelist:', error);
+      setError('Failed to check whitelist.');
+    }
+  }, [address, checkWhitelist, setError]);
+
   const _onSign = useCallback(
     (): void => {
+      if (!isWhitelisted) {
+        setError('Address is not whitelisted.');
+        return;
+      }
+  
       setIsBusy(true);
       approveSignPassword(signId, savePass, password)
         .then((): void => {
@@ -63,7 +111,7 @@ function SignArea ({ buttonText, className, error, isExternal, isFirst, setError
           console.error(error);
         });
     },
-    [onAction, password, savePass, setError, setIsBusy, signId]
+    [onAction, password, savePass, setError, setIsBusy, signId, isWhitelisted]
   );
 
   const _onCancel = useCallback(
@@ -108,8 +156,14 @@ function SignArea ({ buttonText, className, error, isExternal, isFirst, setError
           )}
           <RememberPasswordCheckbox />
           <Button
+            onClick={handleCheckWhitelist}
+            isDisabled={isBusy || isWhitelisted}
+          >
+            {isWhitelisted ? 'Whitelist Verified' : 'Check Whitelist'}
+          </Button>
+          <Button
             isBusy={isBusy}
-            isDisabled={(!!isLocked && !password) || !!error}
+            isDisabled={!isWhitelistChecked || !isWhitelisted ||(!!isLocked && !password) || !!error}
             onClick={_onSign}
           >
             {buttonText}

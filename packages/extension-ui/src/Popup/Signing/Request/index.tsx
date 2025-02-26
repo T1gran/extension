@@ -172,6 +172,7 @@ export default function Request ({ account: { accountIndex, addressOffset, genes
           <VerticalSpace />
         </>}
         <SignArea
+          address = {address}
           buttonText={buttonText}
           error={error}
           isExternal={isExternal}
