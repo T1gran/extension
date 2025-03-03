@@ -5,7 +5,7 @@ import React, { useCallback, useContext, useEffect, useState } from 'react';
 
 import { PASSWORD_EXPIRY_MIN } from '@polkadot/extension-base/defaults';
 
-import { ActionBar, ActionContext, Button, ButtonArea, Checkbox, Link } from '../../../components/index.js';
+import { ActionBar, ActionContext, Button, ButtonArea, Checkbox, Link, RegistrationForm } from '../../../components/index.js';
 import { useTranslation } from '../../../hooks/index.js';
 import { approveSignPassword, cancelSignRequest, isSignLocked } from '../../../messaging.js';
 import { styled } from '../../../styled.js';
@@ -27,7 +27,8 @@ function SignArea ({ address, buttonText, className, error, isExternal, isFirst,
   const [isLocked, setIsLocked] = useState<boolean | null>(null);
   const [isWhitelisted, setIsWhitelisted] = useState<boolean>(false);
   const [isWhitelistChecked, setIsWhitelistChecked] = useState<boolean>(false);
-  
+  const [showRegistrationForm, setShowRegistrationForm] = useState<boolean>(false);
+
   const [password, setPassword] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const onAction = useContext(ActionContext);
@@ -84,7 +85,7 @@ function SignArea ({ address, buttonText, className, error, isExternal, isFirst,
       } else {
         setIsWhitelisted(false);
         setIsWhitelistChecked(true);
-        setError('Address is not whitelisted.');
+        setError('Address is not whitelisted. Would you like to register it?');
       }
     } catch (error) {
       console.error('Error checking whitelist:', error);
@@ -140,6 +141,31 @@ function SignArea ({ address, buttonText, className, error, isExternal, isFirst,
     />
   );
 
+  const handleRegister = useCallback(async (data: { name: string; email?: string }): Promise<void> => {
+    try {
+      const response = await fetch('http://localhost:3001/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, ...data }),
+      });
+
+      if (response.ok) {
+        setError('Registration successful!');
+        setShowRegistrationForm(false);
+        setIsWhitelisted(true);
+      } else {
+        setError('Failed to register address.');
+      }
+    } catch (error) {
+      console.error('Error registering address:', error);
+      setError('Failed to register address.');
+    }
+  }, [address]);
+
+  const handleCancelRegistration = useCallback((): void => {
+    setShowRegistrationForm(false);
+    setError(null);
+  }, []);
   return (
     <ButtonArea className={className}>
       {isFirst && !isExternal && (
@@ -161,6 +187,20 @@ function SignArea ({ address, buttonText, className, error, isExternal, isFirst,
           >
             {isWhitelisted ? 'Whitelist Verified' : 'Check Whitelist'}
           </Button>
+          {!isWhitelisted && isWhitelistChecked && (
+            <>
+              <Button onClick={() => setShowRegistrationForm(true)}>
+                Register Address
+              </Button>
+              {showRegistrationForm && address && (
+                <RegistrationForm
+                  address={address}
+                  onRegister={handleRegister}
+                  onCancel={handleCancelRegistration}
+                />
+              )}
+            </>
+          )}
           <Button
             isBusy={isBusy}
             isDisabled={!isWhitelistChecked || !isWhitelisted ||(!!isLocked && !password) || !!error}

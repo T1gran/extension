@@ -14,9 +14,10 @@ export interface ButtonProps {
   isDisabled?: boolean;
   onClick?: () => void | Promise<void | boolean> | null;
   to?: string;
+  type?: 'button' | 'submit' | 'reset';
 }
 
-function Button ({ children, className = '', isBusy, isDisabled, onClick, to }: ButtonProps): React.ReactElement<ButtonProps> {
+function Button ({ children, className = '', isBusy, isDisabled, onClick, to, type }: ButtonProps): React.ReactElement<ButtonProps> {
   const _onClick = useCallback(
     (): void => {
       if (isBusy || isDisabled) {
@@ -34,6 +35,7 @@ function Button ({ children, className = '', isBusy, isDisabled, onClick, to }: 
 
   return (
     <button
+      type={type}
       className={`${className}${(isDisabled || isBusy) ? ' isDisabled' : ''}${isBusy ? ' isBusy' : ''}`}
       disabled={isDisabled || isBusy}
       onClick={_onClick}

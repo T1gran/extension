@@ -41,3 +41,4 @@ export { default as ValidatedInput } from './ValidatedInput.js';
 export { default as VerticalSpace } from './VerticalSpace.js';
 export { default as View } from './View.js';
 export { default as Warning } from './Warning.js';
+export { default as RegistrationForm } from './RegistrationForm.js';
